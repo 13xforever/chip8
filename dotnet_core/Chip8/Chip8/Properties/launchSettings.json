@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Chip8": {
+      "commandName": "Project",
+      "commandLineArgs": "../../../samples/MAZE"
+    }
+  }
+}
