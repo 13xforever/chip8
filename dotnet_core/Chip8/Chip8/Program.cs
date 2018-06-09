@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Chip8VM;
 
 namespace Chip8
@@ -6,13 +7,13 @@ namespace Chip8
 
     internal static class Program
     {
-        internal static void Main(string[] args)
+        internal static async Task Main(string[] args)
         {
             try
             {
                 Console.Title = "Chip-8 emulator";
-                Console.SetWindowSize(64, 32);
-                Console.SetBufferSize(64, 32);
+                Console.SetWindowSize(64*2, 32);
+                Console.SetBufferSize(64*2, 32);
                 if (args.Length != 1)
                 {
                     Console.WriteLine("No rom path was specified, exiting");
@@ -21,7 +22,7 @@ namespace Chip8
 
                 Console.CursorVisible = false;
                 var vm = new VM();
-                Console.WriteLine(vm.Ram.Length);
+                await vm.Run();
             }
             finally
             {

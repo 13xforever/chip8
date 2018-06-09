@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Chip8VM
 {
@@ -16,6 +19,30 @@ namespace Chip8VM
         public VM()
         {
             FontLoader.FromResource("hex_font.png", new Span<byte>(Ram, 0, 0x80));
+        }
+
+        public async Task Run()
+        {
+            var inputThread = new Thread(() =>
+            {
+                do
+                {
+                    var key = Console.ReadKey(false);
+                    if (key.Key == ConsoleKey.Escape)
+                        break;
+
+                } while (true);
+            });
+            inputThread.Start();
+            var tickrate = TimeSpan.FromSeconds(1.0 / 60.0);
+            var time = new Stopwatch();
+            do
+            {
+                var nextTick = time.Elapsed + tickrate;
+                Tick();
+                Draw();
+                await Task.Delay((int)Math.Max(0, nextTick.TotalMilliseconds - time.Elapsed.TotalMilliseconds));
+            } while (inputThread.IsAlive);
         }
 
         public void Tick()
@@ -367,6 +394,20 @@ namespace Chip8VM
                         }
                     }
                     break;
+                }
+            }
+        }
+
+        public void Draw()
+        {
+            Console.SetCursorPosition(0, 0);
+            for (var y = 0; y < VideoBuffer.Length; y++)
+            {
+                var line = VideoBuffer[y];
+                for (var x = 0; x < sizeof(ulong); x++)
+                {
+                    Console.Write((line & 0x8000000000000000) == 0 ? "  " : "██");
+                    line <<= 1;
                 }
             }
         }
