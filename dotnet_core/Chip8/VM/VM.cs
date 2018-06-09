@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Text;
 using System.Threading;
 
 namespace Chip8VM
@@ -45,20 +46,23 @@ namespace Chip8VM
                 var lastFpsTimestamp = 0.0;
                 var frames = 0;
                 var fps = 0.0;
+                var outBuf = new StringBuilder(Console.WindowWidth * Console.WindowHeight);
                 do
                 {
                     lock (VideoBuffer)
                         Buffer.BlockCopy(VideoBuffer, 0, videoBufferCopy, 0, bufferLengthInBytes);
                     Console.SetCursorPosition(0, 0);
+                    outBuf.Clear();
                     for (var y = 0; y < videoBufferCopy.Length; y++)
                     {
                         var line = videoBufferCopy[y];
                         for (var x = 0; x < sizeof(ulong) * 8; x++)
                         {
-                            Console.Write((line & 0x8000000000000000) == 0 ? "  " : "██");
+                            outBuf.Append((line & 0x8000000000000000) == 0 ? "  " : "██");
                             line <<= 1;
                         }
                     }
+                    Console.Write(outBuf.ToString());
                     var timeDelta = time.Elapsed.Ticks - lastFpsTimestamp;
                     if (timeDelta > fpsUpdateThreshold)
                     {
@@ -66,10 +70,9 @@ namespace Chip8VM
                         frames = 0;
                         lastFpsTimestamp = time.Elapsed.Ticks;
                     }
-
                     Console.Write($"{name}: {tps:#0.00} tps / {fps:#0.00} fps");
                     frames++;
-                } while (true);
+                } while (inputThread.IsAlive);
             });
             inputThread.Start();
             drawThread.Start();
@@ -99,7 +102,7 @@ namespace Chip8VM
                 }
 
                 var sleepTime = (nextTick.Ticks - time.Elapsed.Ticks) * 1000 / Stopwatch.Frequency;
-                Thread.Sleep((int)Math.Max(0, sleepTime));
+                Thread.Sleep((int) Math.Max(0, sleepTime - 1));
             } while (inputThread.IsAlive);
             drawThread.Abort();
         }
