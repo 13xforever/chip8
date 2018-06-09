@@ -104,7 +104,7 @@ namespace Chip8VM
                 // ADD
                 case 0x70:
                 {
-                    Registers.VR[GetX(ref i1)] += i2; //todo: carry flag
+                    Registers.VR[GetX(ref i1)] += i2;
                     Inc(ref Registers.PC);
                     break;
                 }
@@ -227,7 +227,29 @@ namespace Chip8VM
                 //DRW Vx, Vy, nibble
                 case 0xd0:
                 {
-                    //todo
+                    Registers.VF = 0x00;
+                    var x = GetX(ref i1);
+
+                    ulong simple(byte spriteLine, byte offset) => ((ulong)spriteLine) << (56 - offset);
+                    ulong trivial(byte spriteLine, byte offset) => (ulong)spriteLine;
+                    ulong wrap(byte spriteLine, byte offset) => (((ulong)spriteLine) >> (offset - 56)) | (((ulong)spriteLine) << (64 - offset));
+
+                    Func<byte, byte, ulong> transform;
+                    if (x < 56)
+                        transform = simple;
+                    else if (x == 56)
+                        transform = trivial;
+                    else
+                        transform = wrap;
+                    for (ushort y = 0, i = Registers.IR; y < GetY(ref i2); y++, i++)
+                    {
+                        ref var line = ref VideoBuffer[y % VideoBuffer.Length];
+                        var oldLine = line;
+                        var spriteLine = transform(Ram[i], x);
+                        line ^= spriteLine;
+                        if ((line & oldLine) != oldLine)
+                            Registers.VF = 0x01;
+                    }
                     Inc(ref Registers.PC);
                     break;
                 }
