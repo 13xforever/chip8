@@ -2,7 +2,7 @@
   "profiles": {
     "Chip8": {
       "commandName": "Project",
-      "commandLineArgs": "../../../../../../samples/PONG"
+      "commandLineArgs": "../../../../../../samples/MAZE"
     }
   }
 }

@@ -15,7 +15,6 @@ namespace Chip8VM
         private readonly Random rng = new Random();
         private readonly byte[] rngBuffer = new byte[1];
         private readonly string name;
-        private double fps;
 
         public VM(string name)
         {
@@ -26,6 +25,9 @@ namespace Chip8VM
 
         public void Run()
         {
+            var time = new Stopwatch();
+            var fpsUpdateThreshold = 0.5 * Stopwatch.Frequency;
+            var tps = 0.0;
             var inputThread = new Thread(() =>
             {
                 do
@@ -36,25 +38,58 @@ namespace Chip8VM
 
                 } while (true);
             });
+            var drawThread = new Thread(() =>
+            {
+                var videoBufferCopy = new ulong[VideoBuffer.Length];
+                var bufferLengthInBytes = videoBufferCopy.Length * sizeof(ulong);
+                var lastFpsTimestamp = 0.0;
+                var frames = 0;
+                var fps = 0.0;
+                do
+                {
+                    lock (VideoBuffer)
+                        Buffer.BlockCopy(VideoBuffer, 0, videoBufferCopy, 0, bufferLengthInBytes);
+                    Console.SetCursorPosition(0, 0);
+                    for (var y = 0; y < videoBufferCopy.Length; y++)
+                    {
+                        var line = videoBufferCopy[y];
+                        for (var x = 0; x < sizeof(ulong) * 8; x++)
+                        {
+                            Console.Write((line & 0x8000000000000000) == 0 ? "  " : "██");
+                            line <<= 1;
+                        }
+                    }
+                    var timeDelta = time.Elapsed.Ticks - lastFpsTimestamp;
+                    if (timeDelta > fpsUpdateThreshold)
+                    {
+                        fps = frames / timeDelta * Stopwatch.Frequency;
+                        frames = 0;
+                        lastFpsTimestamp = time.Elapsed.Ticks;
+                    }
+
+                    Console.Write($"{name}: {tps:#0.00} tps / {fps:#0.00} fps");
+                    frames++;
+                } while (true);
+            });
             inputThread.Start();
-            var tickrate = TimeSpan.FromSeconds(1.0 / 60.0);
-            var lastFpsTimestamp = 0.0;
-            var frames = 0;
-            var time = new Stopwatch();
-            time.Start();
+            drawThread.Start();
+            var tickrate = TimeSpan.FromTicks((long) (1.0 / 60.0 * Stopwatch.Frequency));
+            var ticks = 0;
+            var lastTpsTimestamp = 0.0;
+            time.Restart();
             do
             {
                 var nextTick = time.Elapsed + tickrate;
                 try
                 {
                     Tick();
-                    Draw();
-                    frames++;
-                    var timeDelta = time.Elapsed.TotalMilliseconds - lastFpsTimestamp;
-                    if (timeDelta > 500)
+                    ticks++;
+                    var timeDelta = time.Elapsed.Ticks - lastTpsTimestamp;
+                    if (timeDelta > fpsUpdateThreshold)
                     {
-                        fps = frames / timeDelta * 1000;
-                        frames = 0;
+                        tps = ticks / timeDelta * Stopwatch.Frequency;
+                        ticks = 0;
+                        lastTpsTimestamp = time.Elapsed.Ticks;
                     }
                 }
                 catch (Exception e)
@@ -63,9 +98,10 @@ namespace Chip8VM
                     throw e;
                 }
 
-                var sleepTime = nextTick.TotalMilliseconds - time.Elapsed.TotalMilliseconds;
-                //Thread.Sleep((int)Math.Max(0, sleepTime));
+                var sleepTime = (nextTick.Ticks - time.Elapsed.Ticks) * 1000 / Stopwatch.Frequency;
+                Thread.Sleep((int)Math.Max(0, sleepTime));
             } while (inputThread.IsAlive);
+            drawThread.Abort();
         }
 
         public void Tick()
@@ -85,7 +121,8 @@ namespace Chip8VM
                         // CLS
                         if (i2 == 0xe0)
                         {
-                            Array.Clear(VideoBuffer, 0, VideoBuffer.Length);
+                            lock(VideoBuffer)
+                                Array.Clear(VideoBuffer, 0, VideoBuffer.Length);
                             break;
                         }
                         // RET
@@ -291,15 +328,16 @@ namespace Chip8VM
                     else
                         transform = wrap;
                     var yBoundary = y + GetX(ref i2);
-                    for (ushort yi = y, i = Registers.IR; yi < yBoundary; yi++, i++)
-                    {
-                        ref var line = ref VideoBuffer[yi % VideoBuffer.Length];
-                        var oldLine = line;
-                        var spriteLine = transform(Ram[i], x);
-                        line ^= spriteLine;
-                        if ((line & oldLine) != oldLine)
-                            Registers.VF = 0x01;
-                    }
+                    lock(VideoBuffer)
+                        for (ushort yi = y, i = Registers.IR; yi < yBoundary; yi++, i++)
+                        {
+                            ref var line = ref VideoBuffer[yi % VideoBuffer.Length];
+                            var oldLine = line;
+                            var spriteLine = transform(Ram[i], x);
+                            line ^= spriteLine;
+                            if ((line & oldLine) != oldLine)
+                                Registers.VF = 0x01;
+                        }
                     Inc(ref Registers.PC);
                     break;
                 }
@@ -419,21 +457,6 @@ namespace Chip8VM
                     break;
                 }
             }
-        }
-
-        public void Draw()
-        {
-            Console.SetCursorPosition(0, 0);
-            for (var y = 0; y < VideoBuffer.Length; y++)
-            {
-                var line = VideoBuffer[y];
-                for (var x = 0; x < sizeof(ulong)*8; x++)
-                {
-                    Console.Write((line & 0x8000000000000000) == 0 ? "  " : "██");
-                    line <<= 1;
-                }
-            }
-            Console.Write($"{name}: {fps:#0.00} fps");
         }
 
         private ref byte GetRng()
