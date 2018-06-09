@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Chip8VM
 {
@@ -21,7 +20,7 @@ namespace Chip8VM
             FontLoader.FromResource("hex_font.png", new Span<byte>(Ram, 0, 0x80));
         }
 
-        public async Task Run()
+        public void Run()
         {
             var inputThread = new Thread(() =>
             {
@@ -39,9 +38,17 @@ namespace Chip8VM
             do
             {
                 var nextTick = time.Elapsed + tickrate;
-                Tick();
-                Draw();
-                await Task.Delay((int)Math.Max(0, nextTick.TotalMilliseconds - time.Elapsed.TotalMilliseconds));
+                try
+                {
+                    Tick();
+                    Draw();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    throw e;
+                }
+                Thread.Sleep((int)Math.Max(0, nextTick.TotalMilliseconds - time.Elapsed.TotalMilliseconds));
             } while (inputThread.IsAlive);
         }
 
@@ -379,16 +386,16 @@ namespace Chip8VM
                         // LD [I], Vx
                         case 0x55:
                         {
-                            for (var i = Registers.IR; i < Math.Min(Registers.IR + Registers.VR.Length, Ram.Length); i++)
-                                Ram[i] = Registers.VR[i];
+                            for (ushort i = Registers.IR, ri = 0; i < Math.Min(Registers.IR + Registers.VR.Length, Ram.Length); i++, ri++)
+                                Ram[i] = Registers.VR[ri];
                             Inc(ref Registers.PC);
                             break;
                         }
                         //  LD Vx, [I]
                         case 0x65:
                         {
-                            for (var i = Registers.IR; i < Math.Min(Registers.IR + Registers.VR.Length, Ram.Length); i++)
-                                Registers.VR[i] = Ram[i];
+                            for (ushort i = Registers.IR, ri = 0; i < Math.Min(Registers.IR + Registers.VR.Length, Ram.Length); i++, ri++)
+                                Registers.VR[ri] = Ram[i];
                             Inc(ref Registers.PC);
                             break;
                         }

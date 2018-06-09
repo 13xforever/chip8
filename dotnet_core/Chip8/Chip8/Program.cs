@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Threading.Tasks;
 using Chip8VM;
 
 namespace Chip8
@@ -8,7 +7,7 @@ namespace Chip8
 
     internal static class Program
     {
-        internal static async Task Main(string[] args)
+        internal static void Main(string[] args)
         {
             try
             {
@@ -27,13 +26,14 @@ namespace Chip8
                     return;
                 }
 
+                Console.Title += ": " + Path.GetFileNameWithoutExtension(args[0]);
                 Console.CursorVisible = false;
                 var vm = new VM();
                 using (var stream = File.Open(args[0], FileMode.Open, FileAccess.Read, FileShare.Read))
                 using (var memStream = new MemoryStream(vm.Ram, 0x0200, vm.Ram.Length - 0x0200, true))
-                    await stream.CopyToAsync(memStream);
+                    stream.CopyTo(memStream);
 
-                await vm.Run();
+                vm.Run();
             }
             finally
             {
