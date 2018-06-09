@@ -14,10 +14,14 @@ namespace Chip8VM
 
         private readonly Random rng = new Random();
         private readonly byte[] rngBuffer = new byte[1];
+        private readonly string name;
+        private double fps;
 
-        public VM()
+        public VM(string name)
         {
             FontLoader.FromResource("hex_font.png", new Span<byte>(Ram, 0, 0x80));
+            this.name = name;
+            Console.Title += ": " + name;
         }
 
         public void Run()
@@ -34,7 +38,10 @@ namespace Chip8VM
             });
             inputThread.Start();
             var tickrate = TimeSpan.FromSeconds(1.0 / 60.0);
+            var lastFpsTimestamp = 0.0;
+            var frames = 0;
             var time = new Stopwatch();
+            time.Start();
             do
             {
                 var nextTick = time.Elapsed + tickrate;
@@ -42,13 +49,22 @@ namespace Chip8VM
                 {
                     Tick();
                     Draw();
+                    frames++;
+                    var timeDelta = time.Elapsed.TotalMilliseconds - lastFpsTimestamp;
+                    if (timeDelta > 500)
+                    {
+                        fps = frames / timeDelta * 1000;
+                        frames = 0;
+                    }
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine(e);
                     throw e;
                 }
-                Thread.Sleep((int)Math.Max(0, nextTick.TotalMilliseconds - time.Elapsed.TotalMilliseconds));
+
+                var sleepTime = nextTick.TotalMilliseconds - time.Elapsed.TotalMilliseconds;
+                //Thread.Sleep((int)Math.Max(0, sleepTime));
             } while (inputThread.IsAlive);
         }
 
@@ -59,8 +75,6 @@ namespace Chip8VM
 
             ref var i1 = ref Ram[Registers.PC];
             ref var i2 = ref Ram[Registers.PC + 1];
-
-
             switch (i1 & 0xf0)
             {
                 // SYS
@@ -86,13 +100,13 @@ namespace Chip8VM
                     Registers.PC = GetAddr(ref i1, ref i2);
                     break;
                 }
-                // JP
+                // JP addr
                 case 0x10:
                 {
                     Registers.PC = GetAddr(ref i1, ref i2);
                     break;
                 }
-                // JP
+                // CALL addr
                 case 0x20:
                 {
                     Registers.SP++;
@@ -103,7 +117,7 @@ namespace Chip8VM
                     Registers.PC = GetAddr(ref i1, ref i2);
                     break;
                 }
-                // SE
+                // SE Vx, byte
                 case 0x30:
                 {
                     if (Registers.VR[GetX(ref i1)] == i2)
@@ -111,7 +125,7 @@ namespace Chip8VM
                     Inc(ref Registers.PC);
                     break;
                 }
-                // SNE
+                // SNE Vx, byte
                 case 0x40:
                 {
                     if (Registers.VR[GetX(ref i1)] != i2)
@@ -119,7 +133,7 @@ namespace Chip8VM
                     Inc(ref Registers.PC);
                     break;
                 }
-                // SE
+                // SE Vx, Vy
                 case 0x50:
                 {
                     CheckY0(ref i1, ref i2);
@@ -128,14 +142,14 @@ namespace Chip8VM
                     Inc(ref Registers.PC);
                     break;
                 }
-                // LD
+                // LD Vx, byte
                 case 0x60:
                 {
                     Registers.VR[GetX(ref i1)] = i2;
                     Inc(ref Registers.PC);
                     break;
                 }
-                // ADD
+                // ADD Vx, byte
                 case 0x70:
                 {
                     Registers.VR[GetX(ref i1)] += i2;
@@ -262,7 +276,8 @@ namespace Chip8VM
                 case 0xd0:
                 {
                     Registers.VF = 0x00;
-                    var x = GetX(ref i1);
+                    var x = Registers.VR[GetX(ref i1)];
+                    var y = Registers.VR[GetY(ref i2)];
 
                     ulong simple(byte spriteLine, byte offset) => ((ulong)spriteLine) << (56 - offset);
                     ulong trivial(byte spriteLine, byte offset) => (ulong)spriteLine;
@@ -275,9 +290,10 @@ namespace Chip8VM
                         transform = trivial;
                     else
                         transform = wrap;
-                    for (ushort y = 0, i = Registers.IR; y < GetY(ref i2); y++, i++)
+                    var yBoundary = y + GetX(ref i2);
+                    for (ushort yi = y, i = Registers.IR; yi < yBoundary; yi++, i++)
                     {
-                        ref var line = ref VideoBuffer[y % VideoBuffer.Length];
+                        ref var line = ref VideoBuffer[yi % VideoBuffer.Length];
                         var oldLine = line;
                         var spriteLine = transform(Ram[i], x);
                         line ^= spriteLine;
@@ -411,12 +427,13 @@ namespace Chip8VM
             for (var y = 0; y < VideoBuffer.Length; y++)
             {
                 var line = VideoBuffer[y];
-                for (var x = 0; x < sizeof(ulong); x++)
+                for (var x = 0; x < sizeof(ulong)*8; x++)
                 {
                     Console.Write((line & 0x8000000000000000) == 0 ? "  " : "██");
                     line <<= 1;
                 }
             }
+            Console.Write($"{name}: {fps:#0.00} fps");
         }
 
         private ref byte GetRng()

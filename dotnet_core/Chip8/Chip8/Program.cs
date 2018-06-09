@@ -12,8 +12,8 @@ namespace Chip8
             try
             {
                 Console.Title = "Chip-8 emulator";
-                Console.SetWindowSize(64 * 2, 32);
-                Console.SetBufferSize(64 * 2, 32);
+                Console.SetWindowSize(64 * 2, 32+1);
+                Console.SetBufferSize(64 * 2, 32+1);
                 if (args.Length != 1)
                 {
                     Console.WriteLine("No rom path was specified, exiting");
@@ -26,9 +26,8 @@ namespace Chip8
                     return;
                 }
 
-                Console.Title += ": " + Path.GetFileNameWithoutExtension(args[0]);
                 Console.CursorVisible = false;
-                var vm = new VM();
+                var vm = new VM(Path.GetFileNameWithoutExtension(args[0]));
                 using (var stream = File.Open(args[0], FileMode.Open, FileAccess.Read, FileShare.Read))
                 using (var memStream = new MemoryStream(vm.Ram, 0x0200, vm.Ram.Length - 0x0200, true))
                     stream.CopyTo(memStream);
