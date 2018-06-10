@@ -219,8 +219,7 @@ namespace Chip8VM
                         }
                     }
                     // SYS addr
-                    Registers.PC = GetAddr(ref i1, ref i2);
-                    break;
+                    goto case 0x20;
                 }
                 // JP addr
                 case 0x10:
@@ -324,9 +323,8 @@ namespace Chip8VM
                         // SUB Vx, Vy
                         case 0x05:
                         {
-                            var result = Registers.VR[x] - Registers.VR[y];
                             Registers.VF = Registers.VR[x] > Registers.VR[y] ? (byte)0x01 : (byte)0x00;
-                            Registers.VR[x] = (byte)result;
+                            Registers.VR[x] = (byte)(256 + Registers.VR[x] - Registers.VR[y]);
                             Inc(ref Registers.PC);
                             break;
                         }
@@ -341,9 +339,8 @@ namespace Chip8VM
                         // SUBN Vx, Vy
                         case 0x07:
                         {
-                            var result = Registers.VR[y] - Registers.VR[x];
                             Registers.VF = Registers.VR[y] > Registers.VR[x] ? (byte)0x01 : (byte)0x00;
-                            Registers.VR[x] = (byte)result;
+                            Registers.VR[x] = (byte)(0x0100 + Registers.VR[y] - Registers.VR[x]);
                             Inc(ref Registers.PC);
                             break;
                         }
