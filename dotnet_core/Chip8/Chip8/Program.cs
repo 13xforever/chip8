@@ -36,7 +36,6 @@ namespace Chip8
             }
             Console.Clear();
             Console.WriteLine("Goodbye");
-            Console.ReadKey();
         }
     }
 }

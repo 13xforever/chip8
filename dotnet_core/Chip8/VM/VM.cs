@@ -324,7 +324,7 @@ namespace Chip8VM
                         case 0x05:
                         {
                             Registers.VF = Registers.VR[x] > Registers.VR[y] ? (byte)0x01 : (byte)0x00;
-                            Registers.VR[x] = (byte)(256 + Registers.VR[x] - Registers.VR[y]);
+                            Registers.VR[x] = (byte)(0x0100 + Registers.VR[x] - Registers.VR[y]);
                             Inc(ref Registers.PC);
                             break;
                         }
@@ -352,7 +352,6 @@ namespace Chip8VM
                             Inc(ref Registers.PC);
                             break;
                         }
-
                         default:
                         {
                             CheckY0(ref i1, ref i2);
@@ -432,7 +431,7 @@ namespace Chip8VM
                         {
                             Inc(ref Registers.PC);
                             lock (KeyCodes)
-                                if (KeyCodes[GetX(ref i1)] != 0)
+                                if (KeyCodes[Registers.VR[GetX(ref i1)]] == 1)
                                     Inc(ref Registers.PC);
                             break;
                         }
@@ -441,7 +440,7 @@ namespace Chip8VM
                         {
                             Inc(ref Registers.PC);
                             lock (KeyCodes)
-                                if (KeyCodes[GetX(ref i1)] == 0)
+                                if (KeyCodes[Registers.VR[GetX(ref i1)]] == 0)
                                     Inc(ref Registers.PC);
                             break;
                         }
