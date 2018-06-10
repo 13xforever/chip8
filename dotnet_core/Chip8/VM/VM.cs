@@ -94,6 +94,7 @@ namespace Chip8VM
                         case ConsoleKey.F:
                             KeyCodes[0xf] = 1;
                             break;
+                        case ConsoleKey.Q:
                         case ConsoleKey.Escape:
                             @continue = false;
                             break;
@@ -177,13 +178,14 @@ namespace Chip8VM
                 }
 
                 var sleepTime = (nextTick.Ticks - time.Elapsed.Ticks) * 1000 / Stopwatch.Frequency;
-                Thread.Sleep((int) Math.Max(0, sleepTime - (sleepTime % 2)));
+                Thread.Sleep((int) Math.Max(0, sleepTime - 1));
             } while (inputThread.IsAlive);
         }
 
         private void Tick()
         {
-            if ((Registers.PC & 1) == 1 || Registers.PC > Ram.Length-2)
+            if (//(Registers.PC & 1) == 1 || 
+                Registers.PC > Ram.Length-2)
                 throw new InvalidOperationException($"PC was 0x{Registers.PC:x4}");
 
             ref var i1 = ref Ram[Registers.PC];
