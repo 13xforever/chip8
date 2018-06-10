@@ -25,13 +25,9 @@ namespace Chip8
                     Console.WriteLine("File not found");
                     return;
                 }
-
                 Console.CursorVisible = false;
                 var vm = new VM(Path.GetFileNameWithoutExtension(args[0]));
-                using (var stream = File.Open(args[0], FileMode.Open, FileAccess.Read, FileShare.Read))
-                using (var memStream = new MemoryStream(vm.Ram, 0x0200, vm.Ram.Length - 0x0200, true))
-                    stream.CopyTo(memStream);
-
+                vm.LoadRom(args[0]);
                 vm.Run();
             }
             finally

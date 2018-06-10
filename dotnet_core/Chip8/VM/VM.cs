@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 using System.Threading;
 
@@ -24,20 +25,80 @@ namespace Chip8VM
             Console.Title += ": " + name;
         }
 
+        public void LoadRom(string filename, ushort baseAddress = 0x0200)
+        {
+            using (var stream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var memStream = new MemoryStream(Ram, baseAddress, Ram.Length - baseAddress, true))
+                stream.CopyTo(memStream);
+        }
+
         public void Run()
         {
             var time = new Stopwatch();
+            var tickrate = TimeSpan.FromTicks((long)(1.0 / 60.0 * Stopwatch.Frequency));
             var fpsUpdateThreshold = 0.5 * Stopwatch.Frequency;
             var tps = 0.0;
             var inputThread = new Thread(() =>
             {
+                var @continue = true;
                 do
                 {
-                    var key = Console.ReadKey(false);
-                    if (key.Key == ConsoleKey.Escape)
-                        break;
-
-                } while (true);
+                    var key = Console.ReadKey(true);
+                    switch (key.Key)
+                    {
+                        case ConsoleKey.D0:
+                            KeyCodes[0] = 1;
+                            break;
+                        case ConsoleKey.D1:
+                            KeyCodes[1] = 1;
+                            break;
+                        case ConsoleKey.D2:
+                            KeyCodes[2] = 1;
+                            break;
+                        case ConsoleKey.D3:
+                            KeyCodes[3] = 1;
+                            break;
+                        case ConsoleKey.D4:
+                            KeyCodes[4] = 1;
+                            break;
+                        case ConsoleKey.D5:
+                            KeyCodes[5] = 1;
+                            break;
+                        case ConsoleKey.D6:
+                            KeyCodes[6] = 1;
+                            break;
+                        case ConsoleKey.D7:
+                            KeyCodes[7] = 1;
+                            break;
+                        case ConsoleKey.D8:
+                            KeyCodes[8] = 1;
+                            break;
+                        case ConsoleKey.D9:
+                            KeyCodes[9] = 1;
+                            break;
+                        case ConsoleKey.A:
+                            KeyCodes[0xa] = 1;
+                            break;
+                        case ConsoleKey.B:
+                            KeyCodes[0xb] = 1;
+                            break;
+                        case ConsoleKey.C:
+                            KeyCodes[0xc] = 1;
+                            break;
+                        case ConsoleKey.D:
+                            KeyCodes[0xd] = 1;
+                            break;
+                        case ConsoleKey.E:
+                            KeyCodes[0xe] = 1;
+                            break;
+                        case ConsoleKey.F:
+                            KeyCodes[0xf] = 1;
+                            break;
+                        case ConsoleKey.Escape:
+                            @continue = false;
+                            break;
+                    }
+                } while (@continue);
             });
             var drawThread = new Thread(() =>
             {
@@ -62,7 +123,19 @@ namespace Chip8VM
                             line <<= 1;
                         }
                     }
+                    outBuf.Append($"{name}: {tps:#0.00} tps / {fps:#0.00} fps ");
+                    if (Registers.ST > 0)
+                    {
+                        Console.Beep(440, tickrate.Milliseconds);
+                        outBuf.Append('☼');
+                    }
+                    else
+                        outBuf.Append(' ');
+                    outBuf.Append(' ');
+                    for (var i = 0; i < KeyCodes.Length; i++)
+                        outBuf.Append(KeyCodes[i] == 0 ? " " : i.ToString("X1"));
                     Console.Write(outBuf.ToString());
+                    frames++;
                     var timeDelta = time.Elapsed.Ticks - lastFpsTimestamp;
                     if (timeDelta > fpsUpdateThreshold)
                     {
@@ -70,13 +143,10 @@ namespace Chip8VM
                         frames = 0;
                         lastFpsTimestamp = time.Elapsed.Ticks;
                     }
-                    Console.Write($"{name}: {tps:#0.00} tps / {fps:#0.00} fps");
-                    frames++;
                 } while (inputThread.IsAlive);
             });
             inputThread.Start();
             drawThread.Start();
-            var tickrate = TimeSpan.FromTicks((long) (1.0 / 60.0 * Stopwatch.Frequency));
             var ticks = 0;
             var lastTpsTimestamp = 0.0;
             time.Restart();
@@ -86,6 +156,11 @@ namespace Chip8VM
                 try
                 {
                     Tick();
+                    Array.Clear(KeyCodes, 0, KeyCodes.Length);
+                    if (Registers.DT > 0)
+                        Registers.DT--;
+                    if (Registers.ST > 0)
+                        Registers.ST--;
                     ticks++;
                     var timeDelta = time.Elapsed.Ticks - lastTpsTimestamp;
                     if (timeDelta > fpsUpdateThreshold)
@@ -106,7 +181,7 @@ namespace Chip8VM
             } while (inputThread.IsAlive);
         }
 
-        public void Tick()
+        private void Tick()
         {
             if ((Registers.PC & 1) == 1 || Registers.PC > Ram.Length-2)
                 throw new InvalidOperationException($"PC was 0x{Registers.PC:x4}");
