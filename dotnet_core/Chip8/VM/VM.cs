@@ -524,7 +524,7 @@ namespace Chip8VM
                         // LD [I], Vx
                         case 0x55:
                         {
-                            for (ushort i = Registers.IR, ri = 0; i < Math.Min(Registers.IR + Registers.VR.Length, Ram.Length); i++, ri++)
+                            for (ushort i = Registers.IR, ri = 0; i < Math.Min(Registers.IR + GetX(ref i1), Ram.Length); i++, ri++)
                                 Ram[i] = Registers.VR[ri];
                             Inc(ref Registers.PC);
                             break;
@@ -532,7 +532,7 @@ namespace Chip8VM
                         //  LD Vx, [I]
                         case 0x65:
                         {
-                            for (ushort i = Registers.IR, ri = 0; i < Math.Min(Registers.IR + Registers.VR.Length, Ram.Length); i++, ri++)
+                            for (ushort i = Registers.IR, ri = 0; i < Math.Min(Registers.IR + GetX(ref i1), Ram.Length); i++, ri++)
                                 Registers.VR[ri] = Ram[i];
                             Inc(ref Registers.PC);
                             break;
