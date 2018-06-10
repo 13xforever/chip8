@@ -12,8 +12,8 @@ namespace Chip8
             try
             {
                 Console.Title = "Chip-8 emulator";
-                Console.SetWindowSize(64 * 2, 32+1);
-                Console.SetBufferSize(64 * 2, 32+1);
+                Console.SetBufferSize(64 * 2, 32 + 1);
+                Console.SetWindowSize(64 * 2, 32 + 1);
                 if (args.Length != 1)
                 {
                     Console.WriteLine("No rom path was specified, exiting");
@@ -34,7 +34,8 @@ namespace Chip8
             {
                 Console.CursorVisible = true;
             }
-            Console.WriteLine("\n\nGoodbye");
+            Console.Clear();
+            Console.WriteLine("Goodbye");
             Console.ReadKey();
         }
     }
