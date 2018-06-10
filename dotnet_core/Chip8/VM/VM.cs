@@ -30,6 +30,7 @@ namespace Chip8VM
             using (var stream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read))
             using (var memStream = new MemoryStream(Ram, baseAddress, Ram.Length - baseAddress, true))
                 stream.CopyTo(memStream);
+            Registers.PC = baseAddress;
         }
 
         public void Run()
@@ -47,52 +48,52 @@ namespace Chip8VM
                     switch (key.Key)
                     {
                         case ConsoleKey.D0:
-                            KeyCodes[0] = 1;
+                            lock (KeyCodes) KeyCodes[0x0] = 1;
                             break;
                         case ConsoleKey.D1:
-                            KeyCodes[1] = 1;
+                            lock (KeyCodes) KeyCodes[0x1] = 1;
                             break;
                         case ConsoleKey.D2:
-                            KeyCodes[2] = 1;
+                            lock (KeyCodes) KeyCodes[0x2] = 1;
                             break;
                         case ConsoleKey.D3:
-                            KeyCodes[3] = 1;
+                            lock (KeyCodes) KeyCodes[0x3] = 1;
                             break;
                         case ConsoleKey.D4:
-                            KeyCodes[4] = 1;
+                            lock (KeyCodes) KeyCodes[0x4] = 1;
                             break;
                         case ConsoleKey.D5:
-                            KeyCodes[5] = 1;
+                            lock (KeyCodes) KeyCodes[0x5] = 1;
                             break;
                         case ConsoleKey.D6:
-                            KeyCodes[6] = 1;
+                            lock (KeyCodes) KeyCodes[0x6] = 1;
                             break;
                         case ConsoleKey.D7:
-                            KeyCodes[7] = 1;
+                            lock (KeyCodes) KeyCodes[0x7] = 1;
                             break;
                         case ConsoleKey.D8:
-                            KeyCodes[8] = 1;
+                            lock (KeyCodes) KeyCodes[0x8] = 1;
                             break;
                         case ConsoleKey.D9:
-                            KeyCodes[9] = 1;
+                            lock (KeyCodes) KeyCodes[0x9] = 1;
                             break;
                         case ConsoleKey.A:
-                            KeyCodes[0xa] = 1;
+                            lock (KeyCodes) KeyCodes[0xa] = 1;
                             break;
                         case ConsoleKey.B:
-                            KeyCodes[0xb] = 1;
+                            lock (KeyCodes) KeyCodes[0xb] = 1;
                             break;
                         case ConsoleKey.C:
-                            KeyCodes[0xc] = 1;
+                            lock (KeyCodes) KeyCodes[0xc] = 1;
                             break;
                         case ConsoleKey.D:
-                            KeyCodes[0xd] = 1;
+                            lock (KeyCodes) KeyCodes[0xd] = 1;
                             break;
                         case ConsoleKey.E:
-                            KeyCodes[0xe] = 1;
+                            lock (KeyCodes) KeyCodes[0xe] = 1;
                             break;
                         case ConsoleKey.F:
-                            KeyCodes[0xf] = 1;
+                            lock (KeyCodes) KeyCodes[0xf] = 1;
                             break;
                         case ConsoleKey.Q:
                         case ConsoleKey.Escape:
@@ -125,6 +126,7 @@ namespace Chip8VM
                         }
                     }
                     outBuf.Append($"{name}: {tps:#0.00} tps / {fps:#0.00} fps ");
+                    outBuf.Append(Registers.DT > 0 ? '!' : ' ');
                     if (Registers.ST > 0)
                     {
                         Console.Beep(440, tickrate.Milliseconds);
@@ -157,7 +159,10 @@ namespace Chip8VM
                 try
                 {
                     Tick();
-                    Array.Clear(KeyCodes, 0, KeyCodes.Length);
+                    lock (KeyCodes)
+                    {
+                        Array.Clear(KeyCodes, 0, KeyCodes.Length);
+                    }
                     if (Registers.DT > 0)
                         Registers.DT--;
                     if (Registers.ST > 0)
@@ -429,16 +434,18 @@ namespace Chip8VM
                         case 0x9e:
                         {
                             Inc(ref Registers.PC);
-                            if (KeyCodes[GetX(ref i1)] != 0)
-                                Inc(ref Registers.PC);
+                            lock (KeyCodes)
+                                if (KeyCodes[GetX(ref i1)] != 0)
+                                    Inc(ref Registers.PC);
                             break;
                         }
                         // SKNP Vx
                         case 0xa1:
                         {
                             Inc(ref Registers.PC);
-                            if (KeyCodes[GetX(ref i1)] == 0)
-                                Inc(ref Registers.PC);
+                            lock (KeyCodes)
+                                if (KeyCodes[GetX(ref i1)] == 0)
+                                    Inc(ref Registers.PC);
                             break;
                         }
                         default:
@@ -462,12 +469,13 @@ namespace Chip8VM
                         // LD Vx, K
                         case 0x0a:
                         {
-                            for (byte i = 0; i < KeyCodes.Length; i++)
-                                if (KeyCodes[i] != 0)
-                                {
-                                    Registers.VR[GetX(ref i1)] = i;
-                                    Inc(ref Registers.PC);
-                                }
+                            lock (KeyCodes)
+                                for (byte i = 0; i < KeyCodes.Length; i++)
+                                    if (KeyCodes[i] != 0)
+                                    {
+                                        Registers.VR[GetX(ref i1)] = i;
+                                        Inc(ref Registers.PC);
+                                    }
                             break;
                         }
                         // LD DT, Vx
