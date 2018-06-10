@@ -102,9 +102,8 @@ namespace Chip8VM
                 }
 
                 var sleepTime = (nextTick.Ticks - time.Elapsed.Ticks) * 1000 / Stopwatch.Frequency;
-                Thread.Sleep((int) Math.Max(0, sleepTime - 1));
+                Thread.Sleep((int) Math.Max(0, sleepTime - (sleepTime % 2)));
             } while (inputThread.IsAlive);
-            drawThread.Abort();
         }
 
         public void Tick()

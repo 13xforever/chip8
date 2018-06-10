@@ -38,7 +38,7 @@ namespace Chip8
             {
                 Console.CursorVisible = true;
             }
-            Console.WriteLine("Goodbye");
+            Console.WriteLine("\n\nGoodbye");
             Console.ReadKey();
         }
     }
