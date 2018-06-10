@@ -116,7 +116,6 @@ namespace Chip8VM
             ref var i2 = ref Ram[Registers.PC + 1];
             switch (i1 & 0xf0)
             {
-                // SYS
                 case 0x00:
                 {
                     if (i1 == 0x00)
@@ -137,6 +136,7 @@ namespace Chip8VM
                             break;
                         }
                     }
+                    // SYS addr
                     Registers.PC = GetAddr(ref i1, ref i2);
                     break;
                 }
@@ -202,35 +202,35 @@ namespace Chip8VM
                     var y = GetY(ref i2);
                     switch (i2 & 0x0f)
                     {
-                        // LD
+                        // LD Vx, Vy
                         case 0x00:
                         {
                             Registers.VR[x] = Registers.VR[y];
                             Inc(ref Registers.PC);
                             break;
                         }
-                        // OR
+                        // OR Vx, Vy
                         case 0x01:
                         {
                             Registers.VR[x] |= Registers.VR[y];
                             Inc(ref Registers.PC);
                             break;
                         }
-                        // AND
+                        // AND Vx, Vy
                         case 0x02:
                         {
                             Registers.VR[x] &= Registers.VR[y];
                             Inc(ref Registers.PC);
                             break;
                         }
-                        // XOR
+                        // XOR Vx, Vy
                         case 0x03:
                         {
                             Registers.VR[x] ^= Registers.VR[y];
                             Inc(ref Registers.PC);
                             break;
                         }
-                        // ADD
+                        // ADD Vx, Vy
                         case 0x04:
                         {
                             var result = Registers.VR[x] + Registers.VR[y];
@@ -239,7 +239,7 @@ namespace Chip8VM
                             Inc(ref Registers.PC);
                             break;
                         }
-                        // SUB
+                        // SUB Vx, Vy
                         case 0x05:
                         {
                             var result = Registers.VR[x] - Registers.VR[y];
@@ -248,7 +248,7 @@ namespace Chip8VM
                             Inc(ref Registers.PC);
                             break;
                         }
-                        // SHR
+                        // SHR Vx {, Vy}
                         case 0x06:
                         {
                             Registers.VF = (byte)(Registers.VR[x] & 0x01);
@@ -256,7 +256,7 @@ namespace Chip8VM
                             Inc(ref Registers.PC);
                             break;
                         }
-                        // SUBN
+                        // SUBN Vx, Vy
                         case 0x07:
                         {
                             var result = Registers.VR[y] - Registers.VR[x];
@@ -265,7 +265,7 @@ namespace Chip8VM
                             Inc(ref Registers.PC);
                             break;
                         }
-                        // SHL
+                        // SHL Vx {, Vy}
                         case 0x0e:
                         {
                             Registers.VF = (Registers.VR[x] & 0x08) == 0x08 ? (byte)0x01 : (byte)0x00;
@@ -283,7 +283,7 @@ namespace Chip8VM
                     }
                     break;
                 }
-                //SNE
+                //SNE Vx, Vy
                 case 0x90:
                 {
                     CheckY0(ref i1, ref i2);
@@ -319,9 +319,9 @@ namespace Chip8VM
                     var x = Registers.VR[GetX(ref i1)];
                     var y = Registers.VR[GetY(ref i2)];
 
-                    ulong simple(byte spriteLine, byte offset) => ((ulong)spriteLine) << (56 - offset);
-                    ulong trivial(byte spriteLine, byte offset) => (ulong)spriteLine;
-                    ulong wrap(byte spriteLine, byte offset) => (((ulong)spriteLine) >> (offset - 56)) | (((ulong)spriteLine) << (64 - offset));
+                    ulong simple(byte spriteLine, byte offset) => (ulong)spriteLine << (56 - offset);
+                    ulong trivial(byte spriteLine, byte offset) => spriteLine;
+                    ulong wrap(byte spriteLine, byte offset) => ((ulong)spriteLine >> (offset - 56)) | ((ulong)spriteLine << offset);
 
                     Func<byte, byte, ulong> transform;
                     if (x < 56)
