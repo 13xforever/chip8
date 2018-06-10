@@ -209,6 +209,7 @@ namespace Chip8VM
                             Registers.PC = Stack[Registers.SP];
                             if (Registers.SP > 0) //todo: should it halt?
                                 Registers.SP--;
+                            Inc(ref Registers.PC);
                             break;
                         }
                     }
