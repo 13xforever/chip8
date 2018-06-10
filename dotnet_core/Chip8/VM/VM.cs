@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -9,7 +10,7 @@ namespace Chip8VM
     public class VM
     {
         public readonly Registers Registers = new Registers();
-        public readonly ushort[] Stack = new ushort[32];
+        public readonly Stack<ushort> Stack = new Stack<ushort>(32);
         public readonly ulong[] VideoBuffer = new ulong[32];
         public readonly byte[] Ram = new byte[4096];
         public readonly byte[] KeyCodes = new byte[16];
@@ -211,9 +212,11 @@ namespace Chip8VM
                         // RET
                         if (i2 == 0xee)
                         {
-                            Registers.PC = Stack[Registers.SP];
-                            if (Registers.SP > 0) //todo: should it halt?
-                                Registers.SP--;
+                            if (Stack.Count == 0)
+                                throw new InvalidOperationException("Return with empty stack");
+
+                            Registers.PC = Stack.Pop();
+                            Registers.SP--;
                             Inc(ref Registers.PC);
                             break;
                         }
@@ -230,11 +233,11 @@ namespace Chip8VM
                 // CALL addr
                 case 0x20:
                 {
-                    Registers.SP++;
-                    if (Registers.SP >= Stack.Length)
+                    if (Stack.Count >= 32)
                         throw new StackOverflowException();
 
-                    Stack[Registers.SP] = Registers.PC;
+                    Stack.Push(Registers.PC);
+                    Registers.SP++;
                     Registers.PC = GetAddr(ref i1, ref i2);
                     break;
                 }
@@ -273,7 +276,11 @@ namespace Chip8VM
                 // ADD Vx, byte
                 case 0x70:
                 {
-                    Registers.VR[GetX(ref i1)] += i2;
+                    var x = GetX(ref i1);
+                    var result = (byte)(Registers.VR[x] + i2);
+                    Registers.VR[x] += i2;
+                    if (result != Registers.VR[x])
+                        throw new InvalidOperationException($"ADD: expected {result:x2}, but was {Registers.VR[x]:x2}");
                     Inc(ref Registers.PC);
                     break;
                 }
