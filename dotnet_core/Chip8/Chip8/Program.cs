@@ -2,40 +2,38 @@
 using System.IO;
 using Chip8VM;
 
-namespace Chip8
+namespace Chip8;
+
+internal static class Program
 {
-
-    internal static class Program
+    internal static void Main(string[] args)
     {
-        internal static void Main(string[] args)
+        try
         {
-            try
+            Console.Title = "Chip-8 emulator";
+            Console.SetBufferSize(64 * 2, 32 + 1);
+            Console.SetWindowSize(64 * 2, 32 + 1);
+            if (args.Length != 1)
             {
-                Console.Title = "Chip-8 emulator";
-                Console.SetBufferSize(64 * 2, 32 + 1);
-                Console.SetWindowSize(64 * 2, 32 + 1);
-                if (args.Length != 1)
-                {
-                    Console.WriteLine("No rom path was specified, exiting");
-                    return;
-                }
+                Console.WriteLine("No rom path was specified, exiting");
+                return;
+            }
 
-                if (!File.Exists(args[0]))
-                {
-                    Console.WriteLine("File not found");
-                    return;
-                }
-                Console.CursorVisible = false;
-                var vm = new VM(Path.GetFileNameWithoutExtension(args[0]));
-                vm.LoadRom(args[0]);
-                vm.Run();
-            }
-            finally
+            if (!File.Exists(args[0]))
             {
-                Console.CursorVisible = true;
+                Console.WriteLine("File not found");
+                return;
             }
-            Console.Clear();
-            Console.WriteLine("Goodbye");
+            Console.CursorVisible = false;
+            var vm = new VM(Path.GetFileNameWithoutExtension(args[0]));
+            vm.LoadRom(args[0]);
+            vm.Run();
         }
+        finally
+        {
+            Console.CursorVisible = true;
+        }
+        Console.Clear();
+        Console.WriteLine("Goodbye");
     }
 }
