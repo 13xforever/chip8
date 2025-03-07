@@ -180,7 +180,7 @@ public class VM
             catch (Exception e)
             {
                 Console.WriteLine(e);
-                throw e;
+                throw;
             }
 
             var sleepTime = (nextTick.Ticks - time.Elapsed.Ticks) * 1000 / Stopwatch.Frequency;
